@@ -80,6 +80,65 @@
     }
   };
 
+  // src/asteroid.js
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
+  var Asteroid = class {
+    constructor(center, maxRadius, canvas2, context, flightAngle, flightSpeed, rotationSpeed) {
+      this.center = center;
+      this.maxRadius = maxRadius;
+      this.context = context;
+      this.canvas = canvas2;
+      this.flightAngle = flightAngle;
+      this.flightSpeed = flightSpeed;
+      this.rotationSpeed = rotationSpeed;
+      this.points = [];
+      this._generatePoints(getRandomInt(10, 20));
+      this.angle = 0;
+    }
+    _generatePoints(numPoints) {
+      for (let i = 0; i < numPoints; i++) {
+        const angle = i * (2 * Math.PI / numPoints);
+        const length = Math.floor(this.maxRadius * (Math.random() * 0.5 + 0.5));
+        const point = new Point(0, length).rotate(angle);
+        this.points.push(point);
+      }
+    }
+    draw() {
+      this.context.beginPath();
+      const startingPoint = this.points[0].rotate(this.angle).translate(this.center.x, this.center.y);
+      this.context.moveTo(startingPoint.x, startingPoint.y);
+      for (let i = 1; i < this.points.length; i++) {
+        const realPoint = this.points[i].rotate(this.angle).translate(this.center.x, this.center.y);
+        this.context.lineTo(realPoint.x, realPoint.y);
+      }
+      this.context.lineTo(startingPoint.x, startingPoint.y);
+      this.context.stroke();
+    }
+    update() {
+      const dX = Math.cos(this.flightAngle) * this.flightSpeed;
+      const dY = Math.sin(this.flightAngle) * this.flightSpeed;
+      this.angle += this.rotationSpeed;
+      if (this.angle > 2 * Math.PI) {
+        this.angle -= 2 * Math.PI;
+      }
+      this.center = this.center.translate(dX, dY);
+      if (this.center.x < 0) {
+        this.center.x += this.canvas.width;
+      }
+      if (this.center.x > this.canvas.width) {
+        this.center.x -= this.canvas.width;
+      }
+      if (this.center.y < 0) {
+        this.center.y += this.canvas.height;
+      }
+      if (this.center.y > this.canvas.height) {
+        this.center.y -= this.canvas.height;
+      }
+    }
+  };
+
   // src/keyManager.js
   var KeyManager = class {
     constructor() {
@@ -137,6 +196,29 @@
     canvas,
     ctx
   );
+  function generateAsteroid(canvas2, context) {
+    const center = new Point(
+      Math.floor(Math.random() * CANVAS_WIDTH),
+      Math.floor(Math.random() * CANVAS_HEIGHT)
+    );
+    const flightAngle = Math.random() * 2 * Math.PI;
+    const rotationSpeed = Math.random() * 5e-3;
+    const size = 50;
+    const flightSpeed = 1;
+    return new Asteroid(
+      center,
+      size,
+      canvas2,
+      context,
+      flightAngle,
+      flightSpeed,
+      rotationSpeed
+    );
+  }
+  var asteroids = [
+    generateAsteroid(canvas, ctx),
+    generateAsteroid(canvas, ctx)
+  ];
   function updateLabels() {
     labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
     labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
@@ -145,7 +227,11 @@
   function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ship.update();
-    ship.draw(ctx);
+    ship.draw();
+    asteroids.forEach((asteroid) => {
+      asteroid.update();
+      asteroid.draw();
+    });
     updateLabels();
     requestAnimationFrame(loop);
   }

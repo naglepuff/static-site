@@ -16,4 +16,5 @@ class Point {
     return new Point(this.x + dx, this.y + dy);
   }
 }
+
 export { Point };

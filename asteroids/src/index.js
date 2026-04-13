@@ -1,5 +1,6 @@
 import { Point } from "./point.js";
 import { Ship } from "./ship.js";
+import { Asteroid } from "./asteroid.js";
 import { KeyManager } from "./keyManager.js";
 
 const CANVAS_HEIGHT = 500;
@@ -29,6 +30,32 @@ const ship = new Ship(
   ctx,
 );
 
+function generateAsteroid(canvas, context) {
+  const center = new Point(
+    Math.floor(Math.random() * CANVAS_WIDTH),
+    Math.floor(Math.random() * CANVAS_HEIGHT),
+  );
+  const flightAngle = Math.random() * 2 * Math.PI;
+  const rotationSpeed = Math.random() * 0.005;
+  const size = 50;
+  const flightSpeed = 1;
+  return new Asteroid(
+    center,
+    size,
+    canvas,
+    context,
+    flightAngle,
+    flightSpeed,
+    rotationSpeed,
+  );
+}
+
+const asteroids = [
+  generateAsteroid(canvas, ctx),
+  generateAsteroid(canvas, ctx),
+  generateAsteroid(canvas, ctx),
+];
+
 function updateLabels() {
   labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
   labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
@@ -39,7 +66,12 @@ function loop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ship.update();
-  ship.draw(ctx);
+  ship.draw();
+
+  asteroids.forEach((asteroid) => {
+    asteroid.update();
+    asteroid.draw();
+  });
 
   updateLabels();
 
