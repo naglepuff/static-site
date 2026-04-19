@@ -1,4 +1,5 @@
 import { Point } from "./point.js";
+import { LARGE_ASTEROID_RADIUS_CLAMP, TAU } from "./constants.js";
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -29,8 +30,12 @@ class Asteroid {
 
   _generatePoints(numPoints) {
     for (let i = 0; i < numPoints; i++) {
-      const angle = i * ((2 * Math.PI) / numPoints);
-      const length = Math.floor(this.maxRadius * (Math.random() * 0.5 + 0.5));
+      const angle = i * (TAU / numPoints);
+      const length = Math.floor(
+        this.maxRadius *
+          (Math.random() * LARGE_ASTEROID_RADIUS_CLAMP +
+            LARGE_ASTEROID_RADIUS_CLAMP),
+      );
       const point = new Point(0, length).rotate(angle);
       this.points.push(point);
     }
@@ -56,8 +61,8 @@ class Asteroid {
     const dX = Math.cos(this.flightAngle) * this.flightSpeed;
     const dY = Math.sin(this.flightAngle) * this.flightSpeed;
     this.angle += this.rotationSpeed;
-    if (this.angle > 2 * Math.PI) {
-      this.angle -= 2 * Math.PI;
+    if (this.angle > TAU) {
+      this.angle -= TAU;
     }
 
     this.center = this.center.translate(dX, dY);
