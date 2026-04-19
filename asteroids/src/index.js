@@ -17,6 +17,7 @@ const ctx = canvas.getContext("2d");
 const labelAngle = document.getElementById("label--angle");
 const labelXVelocity = document.getElementById("label--vx");
 const labelYVelocity = document.getElementById("label--vy");
+const labelColliding = document.getElementById("label--collision");
 
 const keyManager = new KeyManager();
 
@@ -60,6 +61,14 @@ function updateLabels() {
   labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
   labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
   labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
+  labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
+}
+
+function spawnWave(canvas, context, ship, asteroidsList) {
+  // TODO
+  // Pick a certain distance around the ship, then pick random
+  // angles. Draw asteroids centered around those points, going
+  // in random directions.
 }
 
 function loop() {
@@ -71,6 +80,8 @@ function loop() {
   asteroids.forEach((asteroid) => {
     asteroid.update();
     asteroid.draw();
+
+    ship.isCollidingWithAsteroid(asteroid);
   });
 
   updateLabels();

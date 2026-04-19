@@ -17,69 +17,6 @@
     }
   };
 
-  // src/ship.js
-  var Ship = class _Ship {
-    static dA = 0.05;
-    static dV = 0.01;
-    constructor(center, rotation, height, width, keyManager2, canvas2, context) {
-      this.center = center;
-      this.rotation = rotation;
-      this.height = height;
-      this.width = width;
-      this.keyManager = keyManager2;
-      this.dX = 0;
-      this.dY = 0;
-      this.canvas = canvas2;
-      this.context = context;
-    }
-    draw() {
-      const tip = new Point(0, -1 * this.height / 3).rotate(this.rotation).translate(this.center.x, this.center.y);
-      const lowerLeft = new Point(-2 * this.width / 3, this.height).rotate(this.rotation).translate(this.center.x, this.center.y);
-      const middle = new Point(0, 2 * this.height / 3).rotate(this.rotation).translate(this.center.x, this.center.y);
-      const lowerRight = new Point(2 * this.width / 3, this.height).rotate(this.rotation).translate(this.center.x, this.center.y);
-      this.context.beginPath();
-      this.context.moveTo(tip.x, tip.y);
-      this.context.lineTo(lowerLeft.x, lowerLeft.y);
-      this.context.lineTo(middle.x, middle.y);
-      this.context.lineTo(lowerRight.x, lowerRight.y);
-      this.context.fill();
-    }
-    update() {
-      if (!this.keyManager) {
-        return;
-      }
-      if (this.keyManager.cw) {
-        this.rotation += _Ship.dA;
-        if (this.rotation > 2 * Math.PI) {
-          this.rotation -= 2 * Math.PI;
-        }
-      }
-      if (this.keyManager.ccw) {
-        this.rotation -= _Ship.dA;
-        if (this.rotation < 0) {
-          this.rotation += 2 * Math.PI;
-        }
-      }
-      if (this.keyManager.acc) {
-        this.dY -= Math.cos(this.rotation) * _Ship.dV;
-        this.dX += Math.sin(this.rotation) * _Ship.dV;
-      }
-      this.center = this.center.translate(this.dX, this.dY);
-      if (this.center.x < 0) {
-        this.center.x += this.canvas.width;
-      }
-      if (this.center.x > this.canvas.width) {
-        this.center.x -= this.canvas.width;
-      }
-      if (this.center.y < 0) {
-        this.center.y += this.canvas.height;
-      }
-      if (this.center.y > this.canvas.height) {
-        this.center.y -= this.canvas.height;
-      }
-    }
-  };
-
   // src/asteroid.js
   function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -139,6 +76,113 @@
     }
   };
 
+  // src/ship.js
+  var Ship = class _Ship {
+    static dA = 0.05;
+    static dV = 0.01;
+    constructor(center, rotation, height, width, keyManager2, canvas2, context) {
+      this.center = center;
+      this.rotation = rotation;
+      this.height = height;
+      this.width = width;
+      this.keyManager = keyManager2;
+      this.dX = 0;
+      this.dY = 0;
+      this.canvas = canvas2;
+      this.context = context;
+      this.colliding = false;
+    }
+    draw() {
+      const tip = new Point(0, -1 * this.height / 3).rotate(this.rotation).translate(this.center.x, this.center.y);
+      const lowerLeft = new Point(-2 * this.width / 3, this.height).rotate(this.rotation).translate(this.center.x, this.center.y);
+      const middle = new Point(0, 2 * this.height / 3).rotate(this.rotation).translate(this.center.x, this.center.y);
+      const lowerRight = new Point(2 * this.width / 3, this.height).rotate(this.rotation).translate(this.center.x, this.center.y);
+      this.context.beginPath();
+      this.context.moveTo(tip.x, tip.y);
+      this.context.lineTo(lowerLeft.x, lowerLeft.y);
+      this.context.lineTo(middle.x, middle.y);
+      this.context.lineTo(lowerRight.x, lowerRight.y);
+      this.context.fill();
+    }
+    update() {
+      if (!this.keyManager) {
+        return;
+      }
+      if (this.keyManager.cw) {
+        this.rotation += _Ship.dA;
+        if (this.rotation > 2 * Math.PI) {
+          this.rotation -= 2 * Math.PI;
+        }
+      }
+      if (this.keyManager.ccw) {
+        this.rotation -= _Ship.dA;
+        if (this.rotation < 0) {
+          this.rotation += 2 * Math.PI;
+        }
+      }
+      if (this.keyManager.acc) {
+        this.dY -= Math.cos(this.rotation) * _Ship.dV;
+        this.dX += Math.sin(this.rotation) * _Ship.dV;
+      }
+      this.center = this.center.translate(this.dX, this.dY);
+      if (this.center.x < 0) {
+        this.center.x += this.canvas.width;
+      }
+      if (this.center.x > this.canvas.width) {
+        this.center.x -= this.canvas.width;
+      }
+      if (this.center.y < 0) {
+        this.center.y += this.canvas.height;
+      }
+      if (this.center.y > this.canvas.height) {
+        this.center.y -= this.canvas.height;
+      }
+    }
+    isCollidingWithAsteroid(asteroid) {
+      let intersections = 0;
+      const asteroidShapePoints = asteroid.points.map((point) => {
+        return point.rotate(asteroid.angle).translate(asteroid.center.x, asteroid.center.y);
+      });
+      const asteroidSegments = [];
+      for (let i = 0; i < asteroidShapePoints.length; i++) {
+        asteroidSegments.push([
+          asteroidShapePoints[i],
+          asteroidShapePoints[(i + 1) % asteroidShapePoints.length]
+        ]);
+      }
+      for (let i = 0; i < asteroidSegments; i++) {
+        const segment = asteroidSegments[i];
+        const dY = segment[0].y - segment[1].y;
+        const dX = segment[0].x - segment[1].x;
+        const maxY = Math.max(segment[0].y, segment[1].y);
+        const minY = Math.min(segment[0].y, segment[1].y);
+        const maxX = Math.max(segment[0].x, segment[1].x);
+        const minX = Math.min(segment[0].x, segment[1].x);
+        if (dY === 0) {
+          if (this.center.y === minY) {
+            return this.center.x < maxX && this.center.x > minX;
+          }
+        }
+        if (dX === 0) {
+          if (this.center.x === minX) {
+            return this.center.y < maxY && this.center.x > minY;
+          }
+        }
+        if (this.center.y >= maxY || this.center.y <= minY) {
+          continue;
+        }
+        if (this.center.x >= maxX) {
+          continue;
+        }
+        intersections++;
+      }
+      if (intersections % 2 === 1) {
+        this.colliding = true;
+      }
+      return intersections % 2 === 1;
+    }
+  };
+
   // src/keyManager.js
   var KeyManager = class {
     constructor() {
@@ -186,6 +230,7 @@
   var labelAngle = document.getElementById("label--angle");
   var labelXVelocity = document.getElementById("label--vx");
   var labelYVelocity = document.getElementById("label--vy");
+  var labelColliding = document.getElementById("label--collision");
   var keyManager = new KeyManager();
   var ship = new Ship(
     new Point(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2),
@@ -217,12 +262,14 @@
   }
   var asteroids = [
     generateAsteroid(canvas, ctx),
+    generateAsteroid(canvas, ctx),
     generateAsteroid(canvas, ctx)
   ];
   function updateLabels() {
     labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
     labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
     labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
+    labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
   }
   function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -231,6 +278,7 @@
     asteroids.forEach((asteroid) => {
       asteroid.update();
       asteroid.draw();
+      ship.isCollidingWithAsteroid(asteroid);
     });
     updateLabels();
     requestAnimationFrame(loop);
