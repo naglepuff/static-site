@@ -261,6 +261,17 @@
     canvas,
     ctx
   );
+  function updateLabels() {
+    labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
+    labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
+    labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
+    labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
+    labelAsteroidCount.innerHTML = `Asteroid count: ${asteroids.length}`;
+  }
+  function setGameMessage(message) {
+    labelGameMessage.innerHTML = message;
+  }
+  var asteroids = [];
   function generateAsteroid(canvas2, context, around, distance) {
     const positionAngle = Math.random() * TAU;
     const center = new Point(0, distance).rotate(positionAngle).translate(around.x, around.y);
@@ -277,17 +288,6 @@
       flightSpeed,
       rotationSpeed
     );
-  }
-  var asteroids = [generateAsteroid(canvas, ctx, ship.center, 300)];
-  function updateLabels() {
-    labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
-    labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
-    labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
-    labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
-    labelAsteroidCount.innerHTML = `Asteroid count: ${asteroids.length}`;
-  }
-  function setGameMessage(message) {
-    labelGameMessage.innerHTML = message;
   }
   function addAsteroid() {
     const distance = Math.floor(Math.random() * CANVAS_WIDTH - MIN_ASTEROID_SPAWN_DISTANCE) + MIN_ASTEROID_SPAWN_DISTANCE;
