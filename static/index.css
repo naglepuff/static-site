@@ -2,6 +2,11 @@ body {
     margin: 0;
 }
 
+p, h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
 .layout {
     display: grid;
 
@@ -25,10 +30,9 @@ body {
 }
 
 .content {
-    padding: 2rem;
+    padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
 }
 
@@ -57,7 +61,55 @@ body {
     display: inline;
 }
 
+/** 
+* CONTENT FEEDS
+*/
+.content-header {
+    padding-bottom: 16px;
+}
+
+.content-feed {
+    max-width: 90%;
+}
+
+.ytiframe-container {
+    display: flex;
+    justify-content: center;
+    padding: 0.5em;
+}
+
+/** 
+* ASTEROIDS
+*/
 #canvas {
     margin: 0 auto;
     background-color: yellow;
+}
+
+/**
+* LISTS
+*/
+dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1rem;
+}
+
+dt, dd {
+    margin: 0;
+}
+
+dt {
+    font-weight: bold;
+    font-style: italic;
+}
+/**
+* UTILITY
+*/
+.width-100 {
+    width: 100%;
+}
+
+.flex {
+    display: flex;
 }
