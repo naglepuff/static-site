@@ -22,6 +22,11 @@
   var CANVAS_WIDTH = 700;
   var ROCKET_HEIGHT = 15;
   var ROCKET_WIDTH = 10;
+  var LARGE_ASTEROID_SIZE = 50;
+  var LARGE_ASTEROID_FLIGHT_SPEED = 1;
+  var LARGE_ASTEROID_ROTATION_MODIFIER = 5e-3;
+  var MIN_ASTEROID_SPAWN_DISTANCE = 200;
+  var LARGE_ASTEROID_RADIUS_CLAMP = 0.5;
   var BULLET_RADIUS = 2;
   var BULLET_IMPULSE = 2.5;
   var TAU = 2 * Math.PI;
@@ -129,7 +134,6 @@
           this.canvas
         );
         this.bullets.push(bullet);
-        console.log(this.bullets);
         this.shootCooldown = 500;
       }
     }
@@ -186,6 +190,67 @@
       );
       this.colliding = detections.some((val) => !!val);
       return this.colliding;
+    }
+  };
+
+  // src/asteroid.js
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
+  var Asteroid = class {
+    constructor(center, maxRadius, canvas2, context, flightAngle, flightSpeed, rotationSpeed) {
+      this.center = center;
+      this.maxRadius = maxRadius;
+      this.context = context;
+      this.canvas = canvas2;
+      this.flightAngle = flightAngle;
+      this.flightSpeed = flightSpeed;
+      this.rotationSpeed = rotationSpeed;
+      this.points = [];
+      this._generatePoints(getRandomInt(10, 20));
+      this.angle = 0;
+    }
+    _generatePoints(numPoints) {
+      for (let i = 0; i < numPoints; i++) {
+        const angle = i * (TAU / numPoints);
+        const length = Math.floor(
+          this.maxRadius * (Math.random() * LARGE_ASTEROID_RADIUS_CLAMP + LARGE_ASTEROID_RADIUS_CLAMP)
+        );
+        const point = new Point(0, length).rotate(angle);
+        this.points.push(point);
+      }
+    }
+    draw() {
+      this.context.beginPath();
+      const startingPoint = this.points[0].rotate(this.angle).translate(this.center.x, this.center.y);
+      this.context.moveTo(startingPoint.x, startingPoint.y);
+      for (let i = 1; i < this.points.length; i++) {
+        const realPoint = this.points[i].rotate(this.angle).translate(this.center.x, this.center.y);
+        this.context.lineTo(realPoint.x, realPoint.y);
+      }
+      this.context.lineTo(startingPoint.x, startingPoint.y);
+      this.context.stroke();
+    }
+    update() {
+      const dX = Math.cos(this.flightAngle) * this.flightSpeed;
+      const dY = Math.sin(this.flightAngle) * this.flightSpeed;
+      this.angle += this.rotationSpeed;
+      if (this.angle > TAU) {
+        this.angle -= TAU;
+      }
+      this.center = this.center.translate(dX, dY);
+      if (this.center.x < 0) {
+        this.center.x += this.canvas.width;
+      }
+      if (this.center.x > this.canvas.width) {
+        this.center.x -= this.canvas.width;
+      }
+      if (this.center.y < 0) {
+        this.center.y += this.canvas.height;
+      }
+      if (this.center.y > this.canvas.height) {
+        this.center.y -= this.canvas.height;
+      }
     }
   };
 
@@ -266,6 +331,34 @@
     labelGameMessage.innerHTML = message;
   }
   var asteroids = [];
+  function generateAsteroid(canvas2, context, around, distance) {
+    const positionAngle = Math.random() * TAU;
+    const center = new Point(0, distance).rotate(positionAngle).translate(around.x, around.y);
+    const flightAngle = Math.random() * TAU;
+    const rotationSpeed = Math.random() * LARGE_ASTEROID_ROTATION_MODIFIER;
+    const size = LARGE_ASTEROID_SIZE;
+    const flightSpeed = LARGE_ASTEROID_FLIGHT_SPEED;
+    return new Asteroid(
+      center,
+      size,
+      canvas2,
+      context,
+      flightAngle,
+      flightSpeed,
+      rotationSpeed
+    );
+  }
+  function addAsteroid() {
+    const distance = Math.floor(Math.random() * CANVAS_WIDTH - MIN_ASTEROID_SPAWN_DISTANCE) + MIN_ASTEROID_SPAWN_DISTANCE;
+    asteroids.push(generateAsteroid(canvas, ctx, ship.center, distance));
+  }
+  function addAsteroidIfPlaying() {
+    if (ship.alive) {
+      addAsteroid();
+    }
+    setTimeout(addAsteroidIfPlaying, 1e4);
+  }
+  addAsteroidIfPlaying();
   var lastTime = performance.now();
   function loop(currentTime) {
     const dt = currentTime - lastTime;
@@ -280,10 +373,8 @@
       }
     });
     if (shipBullets.length > 10) {
-      console.log("cleaning up bullets");
       for (let i = shipBullets.length - 1; i >= 0; i--) {
         if (!shipBullets[i].live) {
-          console.log(`cleaning up bullet ${i}`);
           shipBullets.splice(i, 1);
         }
       }
