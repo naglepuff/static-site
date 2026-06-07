@@ -1,21 +1,33 @@
 import { Point } from "./point.js";
-import { TAU } from "./constants.js";
+import { Bullet } from "./bullet.js";
+import { BULLET_IMPULSE, TAU } from "./constants.js";
 
 class Ship {
   static dA = 0.05;
   static dV = 0.01;
 
-  constructor(center, rotation, height, width, keyManager, canvas, context) {
+  constructor(
+    center,
+    rotation,
+    height,
+    width,
+    bullets,
+    keyManager,
+    canvas,
+    context,
+  ) {
     this.center = center; // Point
     this.rotation = rotation; // Angle in radians
     this.height = height; // number
     this.width = width; // number
+    this.bullets = bullets; // Bullet[]
     this.keyManager = keyManager; // AsteroidsKeyManager
     this.dX = 0;
     this.dY = 0;
     this.canvas = canvas; // HTML Canvas
     this.context = context; // Canvas's 2D context
     this.colliding = false;
+    this.shootCooldown = 0;
     this.alive = true;
   }
 
@@ -44,10 +56,7 @@ class Ship {
     this.context.fill();
   }
 
-  update() {
-    if (!this.keyManager) {
-      return;
-    }
+  _updatePosition() {
     if (this.keyManager.cw) {
       this.rotation += Ship.dA;
       if (this.rotation > TAU) {
@@ -64,6 +73,7 @@ class Ship {
       this.dY -= Math.cos(this.rotation) * Ship.dV;
       this.dX += Math.sin(this.rotation) * Ship.dV;
     }
+
     // Update position based on velocity and rotation
     this.center = this.center.translate(this.dX, this.dY);
     if (this.center.x < 0) {
@@ -78,6 +88,33 @@ class Ship {
     if (this.center.y > this.canvas.height) {
       this.center.y -= this.canvas.height;
     }
+  }
+
+  _shoot(dt) {
+    this.shootCooldown -= dt;
+    if (this.shootCooldown <= 0 && this.keyManager.shoot) {
+      const tip = new Point(0, (-1 * this.height) / 3)
+        .rotate(this.rotation)
+        .translate(this.center.x, this.center.y);
+      const speed = Math.sqrt(this.dX ** 2 + this.dY ** 2);
+      const bullet = new Bullet(
+        tip,
+        this.rotation + TAU * 0.75,
+        speed + BULLET_IMPULSE,
+        this.context,
+        this.canvas,
+      );
+      this.bullets.push(bullet);
+      this.shootCooldown = 500; // ms
+    }
+  }
+
+  update(dt) {
+    if (!this.keyManager) {
+      return;
+    }
+    this._updatePosition();
+    this._shoot(dt);
   }
 
   _isCollidingWithAsteroid(asteroid) {

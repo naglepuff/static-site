@@ -25,15 +25,18 @@ const labelXVelocity = document.getElementById("label--vx");
 const labelYVelocity = document.getElementById("label--vy");
 const labelColliding = document.getElementById("label--collision");
 const labelAsteroidCount = document.getElementById("label--asteroid-count");
+const labelBulletCount = document.getElementById("label--bullet-count");
 const labelGameMessage = document.getElementById("label--game-message");
 
 const keyManager = new KeyManager();
 
+const shipBullets = [];
 const ship = new Ship(
   new Point(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2),
   0,
   ROCKET_HEIGHT,
   ROCKET_WIDTH,
+  shipBullets,
   keyManager,
   canvas,
   ctx,
@@ -66,6 +69,7 @@ function updateLabels() {
   labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
   labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
   labelAsteroidCount.innerHTML = `Asteroid count: ${asteroids.length}`;
+  labelBulletCount.innerHTML = `Bullet count: ${shipBullets.length}`;
 }
 
 function setGameMessage(message) {
@@ -109,7 +113,6 @@ function addAsteroid() {
 }
 
 function addAsteroidIfPlaying() {
-  console.log("adding asteroid!");
   if (ship.alive) {
     addAsteroid();
   }
@@ -117,16 +120,36 @@ function addAsteroidIfPlaying() {
 }
 addAsteroidIfPlaying();
 
-function loop() {
+let lastTime = performance.now();
+
+function loop(currentTime) {
+  const dt = currentTime - lastTime;
+  lastTime = currentTime;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ship.update();
+  ship.update(dt);
   ship.draw();
 
+  shipBullets.forEach((bullet) => {
+    if (bullet.live) {
+      bullet.update();
+      bullet.draw();
+    }
+  });
+  if (shipBullets.length > 10) {
+    for (let i = shipBullets.length - 1; i >= 0; i--) {
+      if (!shipBullets[i].live) {
+        shipBullets.splice(i, 1);
+      }
+    }
+  }
+
   asteroids.forEach((asteroid) => {
-    asteroid.update();
+    asteroid.update(dt);
     asteroid.draw();
   });
+
   const collisionDetected = ship.isCollidingWithAsteroids(asteroids);
   if (collisionDetected) {
     ship.alive = false;
@@ -137,4 +160,4 @@ function loop() {
 
   requestAnimationFrame(loop);
 }
-loop();
+loop(lastTime);
