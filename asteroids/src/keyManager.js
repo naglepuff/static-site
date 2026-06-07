@@ -18,6 +18,9 @@ class KeyManager {
       if (event.key === "ArrowUp") {
         this.acc = true;
       }
+      if (event.key === "z") {
+        this.shoot = true;
+      }
     });
 
     document.addEventListener("keyup", (event) => {
@@ -29,6 +32,9 @@ class KeyManager {
       }
       if (event.key === "ArrowUp") {
         this.acc = false;
+      }
+      if (event.key === "z") {
+        this.shoot = false;
       }
     });
   }
