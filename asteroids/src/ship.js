@@ -119,8 +119,9 @@ class Ship {
   }
 
   isCollidingWithAsteroids(asteroids) {
-    const detections = asteroids.map((asteroid) =>
-      isCollidingWithAsteroid(this.center, asteroid),
+    const detections = asteroids.map(
+      (asteroid) =>
+        asteroid.active && isCollidingWithAsteroid(this.center, asteroid),
     );
     // WARNING: side effect
     this.colliding = detections.some((val) => !!val);
