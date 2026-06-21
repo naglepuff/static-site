@@ -146,8 +146,19 @@ function loop(currentTime) {
   }
 
   asteroids.forEach((asteroid) => {
-    asteroid.update(dt);
-    asteroid.draw();
+    if (asteroid.active) {
+      // TODO there is probably a more game-dev way to do this...
+      asteroid.update(dt);
+
+      // Gets the first bullet colliding with this asteroid
+      const collidingBullet = asteroid.checkForCollisions(shipBullets);
+      if (collidingBullet) {
+        asteroid.destroy();
+        collidingBullet.destroy();
+      }
+
+      asteroid.draw();
+    }
   });
 
   const collisionDetected = ship.isCollidingWithAsteroids(asteroids);

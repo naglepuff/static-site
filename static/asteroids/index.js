@@ -51,10 +51,55 @@
       const dY = Math.sin(this.flightAngle) * this.flightSpeed;
       this.center = this.center.translate(dX, dY);
       if (this.center.x < 0 || this.center.x > this.canvas.width || this.center.y < 0 || this.center.y > this.canvas.height) {
-        this.live = false;
+        this.destroy();
       }
     }
+    destroy() {
+      this.live = false;
+    }
   };
+
+  // src/utils.js
+  function isCollidingWithAsteroid(point, asteroid) {
+    let intersections = 0;
+    const asteroidShapePoints = asteroid.points.map((point2) => {
+      return point2.rotate(asteroid.angle).translate(asteroid.center.x, asteroid.center.y);
+    });
+    const asteroidSegments = [];
+    for (let i = 0; i < asteroidShapePoints.length; i++) {
+      asteroidSegments.push([
+        asteroidShapePoints[i],
+        asteroidShapePoints[(i + 1) % asteroidShapePoints.length]
+      ]);
+    }
+    for (let i = 0; i < asteroidSegments.length; i++) {
+      const segment = asteroidSegments[i];
+      const dY = segment[0].y - segment[1].y;
+      const dX = segment[0].x - segment[1].x;
+      const maxY = Math.max(segment[0].y, segment[1].y);
+      const minY = Math.min(segment[0].y, segment[1].y);
+      const maxX = Math.max(segment[0].x, segment[1].x);
+      const minX = Math.min(segment[0].x, segment[1].x);
+      if (dY === 0) {
+        if (point.y === minY) {
+          return point.x < maxX && point.x > minX;
+        }
+      }
+      if (dX === 0) {
+        if (point.x === minX) {
+          return point.y < maxY && point.x > minY;
+        }
+      }
+      if (point.y >= maxY || point.y <= minY) {
+        continue;
+      }
+      if (point.x >= maxX) {
+        continue;
+      }
+      intersections++;
+    }
+    return intersections % 2 === 1;
+  }
 
   // src/ship.js
   var Ship = class _Ship {
@@ -144,49 +189,9 @@
       this._updatePosition();
       this._shoot(dt);
     }
-    _isCollidingWithAsteroid(asteroid) {
-      let intersections = 0;
-      const asteroidShapePoints = asteroid.points.map((point) => {
-        return point.rotate(asteroid.angle).translate(asteroid.center.x, asteroid.center.y);
-      });
-      const asteroidSegments = [];
-      for (let i = 0; i < asteroidShapePoints.length; i++) {
-        asteroidSegments.push([
-          asteroidShapePoints[i],
-          asteroidShapePoints[(i + 1) % asteroidShapePoints.length]
-        ]);
-      }
-      for (let i = 0; i < asteroidSegments.length; i++) {
-        const segment = asteroidSegments[i];
-        const dY = segment[0].y - segment[1].y;
-        const dX = segment[0].x - segment[1].x;
-        const maxY = Math.max(segment[0].y, segment[1].y);
-        const minY = Math.min(segment[0].y, segment[1].y);
-        const maxX = Math.max(segment[0].x, segment[1].x);
-        const minX = Math.min(segment[0].x, segment[1].x);
-        if (dY === 0) {
-          if (this.center.y === minY) {
-            return this.center.x < maxX && this.center.x > minX;
-          }
-        }
-        if (dX === 0) {
-          if (this.center.x === minX) {
-            return this.center.y < maxY && this.center.x > minY;
-          }
-        }
-        if (this.center.y >= maxY || this.center.y <= minY) {
-          continue;
-        }
-        if (this.center.x >= maxX) {
-          continue;
-        }
-        intersections++;
-      }
-      return intersections % 2 === 1;
-    }
     isCollidingWithAsteroids(asteroids2) {
       const detections = asteroids2.map(
-        (asteroid) => this._isCollidingWithAsteroid(asteroid)
+        (asteroid) => isCollidingWithAsteroid(this.center, asteroid)
       );
       this.colliding = detections.some((val) => !!val);
       return this.colliding;
@@ -207,6 +212,7 @@
       this.flightSpeed = flightSpeed;
       this.rotationSpeed = rotationSpeed;
       this.points = [];
+      this.active = true;
       this._generatePoints(getRandomInt(10, 20));
       this.angle = 0;
     }
@@ -251,6 +257,21 @@
       if (this.center.y > this.canvas.height) {
         this.center.y -= this.canvas.height;
       }
+    }
+    checkForCollisions(bullets) {
+      for (let bullet of bullets) {
+        if (!bullet.live) {
+          continue;
+        }
+        const isColliding = isCollidingWithAsteroid(bullet.center, this);
+        if (isColliding) {
+          return bullet;
+        }
+      }
+      return null;
+    }
+    destroy() {
+      this.active = false;
     }
   };
 
@@ -380,8 +401,15 @@
       }
     }
     asteroids.forEach((asteroid) => {
-      asteroid.update(dt);
-      asteroid.draw();
+      if (asteroid.active) {
+        asteroid.update(dt);
+        const collidingBullet = asteroid.checkForCollisions(shipBullets);
+        if (collidingBullet) {
+          asteroid.destroy();
+          collidingBullet.destroy();
+        }
+        asteroid.draw();
+      }
     });
     const collisionDetected = ship.isCollidingWithAsteroids(asteroids);
     if (collisionDetected) {

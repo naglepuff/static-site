@@ -28,8 +28,12 @@ class Bullet {
       this.center.y < 0 ||
       this.center.y > this.canvas.height
     ) {
-      this.live = false;
+      this.destroy();
     }
+  }
+
+  destroy() {
+    this.live = false;
   }
 }
 

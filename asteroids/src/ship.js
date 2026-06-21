@@ -1,6 +1,7 @@
 import { Point } from "./point.js";
 import { Bullet } from "./bullet.js";
 import { BULLET_IMPULSE, TAU } from "./constants.js";
+import { isCollidingWithAsteroid } from "./utils.js";
 
 class Ship {
   static dA = 0.05;
@@ -117,62 +118,9 @@ class Ship {
     this._shoot(dt);
   }
 
-  _isCollidingWithAsteroid(asteroid) {
-    let intersections = 0;
-
-    // 1. Get segments of asteroid
-    const asteroidShapePoints = asteroid.points.map((point) => {
-      return point
-        .rotate(asteroid.angle)
-        .translate(asteroid.center.x, asteroid.center.y);
-    });
-    const asteroidSegments = [];
-    for (let i = 0; i < asteroidShapePoints.length; i++) {
-      asteroidSegments.push([
-        asteroidShapePoints[i],
-        asteroidShapePoints[(i + 1) % asteroidShapePoints.length],
-      ]);
-    }
-
-    // 2. For each segment, determine if the ray this.center.y is in the range
-    for (let i = 0; i < asteroidSegments.length; i++) {
-      const segment = asteroidSegments[i];
-      const dY = segment[0].y - segment[1].y;
-      const dX = segment[0].x - segment[1].x;
-
-      const maxY = Math.max(segment[0].y, segment[1].y);
-      const minY = Math.min(segment[0].y, segment[1].y);
-
-      const maxX = Math.max(segment[0].x, segment[1].x);
-      const minX = Math.min(segment[0].x, segment[1].x);
-
-      if (dY === 0) {
-        // Flat Line. If the center of the ship hits a horizontal line,
-        // it counts as a collition.
-        if (this.center.y === minY) {
-          return this.center.x < maxX && this.center.x > minX;
-        }
-      }
-      if (dX === 0) {
-        // Vertical line. If we're on the line, it's a collision
-        if (this.center.x === minX) {
-          return this.center.y < maxY && this.center.x > minY;
-        }
-      }
-      if (this.center.y >= maxY || this.center.y <= minY) {
-        continue;
-      }
-      if (this.center.x >= maxX) {
-        continue;
-      }
-      intersections++;
-    }
-    return intersections % 2 === 1;
-  }
-
   isCollidingWithAsteroids(asteroids) {
     const detections = asteroids.map((asteroid) =>
-      this._isCollidingWithAsteroid(asteroid),
+      isCollidingWithAsteroid(this.center, asteroid),
     );
     // WARNING: side effect
     this.colliding = detections.some((val) => !!val);
