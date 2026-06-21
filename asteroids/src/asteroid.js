@@ -1,5 +1,6 @@
 import { Point } from "./point.js";
 import { LARGE_ASTEROID_RADIUS_CLAMP, TAU } from "./constants.js";
+import { isCollidingWithAsteroid } from "./utils.js";
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -23,6 +24,7 @@ class Asteroid {
     this.flightSpeed = flightSpeed;
     this.rotationSpeed = rotationSpeed;
     this.points = [];
+    this.active = true;
 
     this._generatePoints(getRandomInt(10, 20));
     this.angle = 0;
@@ -78,6 +80,24 @@ class Asteroid {
     if (this.center.y > this.canvas.height) {
       this.center.y -= this.canvas.height;
     }
+  }
+
+  checkForCollisions(bullets) {
+    for (let bullet of bullets) {
+      if (!bullet.live) {
+        continue;
+      }
+
+      const isColliding = isCollidingWithAsteroid(bullet.center, this);
+      if (isColliding) {
+        return bullet;
+      }
+    }
+    return null;
+  }
+
+  destroy() {
+    this.active = false;
   }
 }
 
