@@ -1,4 +1,59 @@
 (() => {
+  // src/constants.js
+  var CANVAS_HEIGHT = 500;
+  var CANVAS_WIDTH = 700;
+  var ROCKET_HEIGHT = 15;
+  var ROCKET_WIDTH = 10;
+  var LARGE_ASTEROID_SIZE = 50;
+  var LARGE_ASTEROID_FLIGHT_SPEED = 1;
+  var LARGE_ASTEROID_ROTATION_MODIFIER = 5e-3;
+  var MIN_ASTEROID_SPAWN_DISTANCE = 200;
+  var LARGE_ASTEROID_RADIUS_CLAMP = 0.5;
+  var BULLET_RADIUS = 2;
+  var BULLET_IMPULSE = 2.5;
+  var TAU = 2 * Math.PI;
+
+  // src/keyManager.js
+  var KeyManager = class {
+    constructor() {
+      this.cw = false;
+      this.ccw = false;
+      this.acc = false;
+      this.shoot = false;
+      this.setup();
+    }
+    setup() {
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") {
+          this.cw = true;
+        }
+        if (event.key === "ArrowLeft") {
+          this.ccw = true;
+        }
+        if (event.key === "ArrowUp") {
+          this.acc = true;
+        }
+        if (event.key === "z") {
+          this.shoot = true;
+        }
+      });
+      document.addEventListener("keyup", (event) => {
+        if (event.key === "ArrowRight") {
+          this.cw = false;
+        }
+        if (event.key === "ArrowLeft") {
+          this.ccw = false;
+        }
+        if (event.key === "ArrowUp") {
+          this.acc = false;
+        }
+        if (event.key === "z") {
+          this.shoot = false;
+        }
+      });
+    }
+  };
+
   // src/point.js
   var Point = class _Point {
     constructor(x, y) {
@@ -16,20 +71,6 @@
       return new _Point(this.x + dx, this.y + dy);
     }
   };
-
-  // src/constants.js
-  var CANVAS_HEIGHT = 500;
-  var CANVAS_WIDTH = 700;
-  var ROCKET_HEIGHT = 15;
-  var ROCKET_WIDTH = 10;
-  var LARGE_ASTEROID_SIZE = 50;
-  var LARGE_ASTEROID_FLIGHT_SPEED = 1;
-  var LARGE_ASTEROID_ROTATION_MODIFIER = 5e-3;
-  var MIN_ASTEROID_SPAWN_DISTANCE = 200;
-  var LARGE_ASTEROID_RADIUS_CLAMP = 0.5;
-  var BULLET_RADIUS = 2;
-  var BULLET_IMPULSE = 2.5;
-  var TAU = 2 * Math.PI;
 
   // src/bullet.js
   var Bullet = class {
@@ -105,13 +146,13 @@
   var Ship = class _Ship {
     static dA = 0.05;
     static dV = 0.01;
-    constructor(center, rotation, height, width, bullets, keyManager2, canvas2, context) {
+    constructor(center, rotation, height, width, bullets, keyManager, canvas2, context) {
       this.center = center;
       this.rotation = rotation;
       this.height = height;
       this.width = width;
       this.bullets = bullets;
-      this.keyManager = keyManager2;
+      this.keyManager = keyManager;
       this.dX = 0;
       this.dY = 0;
       this.canvas = canvas2;
@@ -189,9 +230,9 @@
       this._updatePosition();
       this._shoot(dt);
     }
-    isCollidingWithAsteroids(asteroids2) {
-      const detections = asteroids2.map(
-        (asteroid) => isCollidingWithAsteroid(this.center, asteroid)
+    isCollidingWithAsteroids(asteroids) {
+      const detections = asteroids.map(
+        (asteroid) => asteroid.active && isCollidingWithAsteroid(this.center, asteroid)
       );
       this.colliding = detections.some((val) => !!val);
       return this.colliding;
@@ -275,149 +316,100 @@
     }
   };
 
-  // src/keyManager.js
-  var KeyManager = class {
-    constructor() {
-      this.cw = false;
-      this.ccw = false;
-      this.acc = false;
-      this.shoot = false;
-      this.setup();
+  // src/asteroidsGame.js
+  var AsteroidsGame = class {
+    constructor(canvas2) {
+      this.canvas = canvas2;
+      canvas2.height = CANVAS_HEIGHT;
+      canvas2.width = CANVAS_WIDTH;
+      this.context = canvas2.getContext("2d");
+      this.keyManager = new KeyManager();
+      this.shipBullets = [];
+      this.ship = new Ship(
+        new Point(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2),
+        0,
+        ROCKET_HEIGHT,
+        ROCKET_WIDTH,
+        this.shipBullets,
+        this.keyManager,
+        this.canvas,
+        this.context
+      );
+      this.asteroids = [];
     }
-    setup() {
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowRight") {
-          this.cw = true;
-        }
-        if (event.key === "ArrowLeft") {
-          this.ccw = true;
-        }
-        if (event.key === "ArrowUp") {
-          this.acc = true;
-        }
-        if (event.key === "z") {
-          this.shoot = true;
+    generateAsteroid(isLargeAsteroid) {
+      const distance = Math.floor(Math.random() * CANVAS_WIDTH - MIN_ASTEROID_SPAWN_DISTANCE) + MIN_ASTEROID_SPAWN_DISTANCE;
+      const positionAngle = Math.random() * TAU;
+      const center = new Point(0, distance).rotate(positionAngle).translate(this.ship.center.x, this.ship.center.y);
+      const flightAngle = Math.random() * TAU;
+      const modifier = isLargeAsteroid ? LARGE_ASTEROID_ROTATION_MODIFIER : null;
+      const rotationSpeed = Math.random() * modifier;
+      const size = isLargeAsteroid ? LARGE_ASTEROID_SIZE : null;
+      const flightSpeed = isLargeAsteroid ? LARGE_ASTEROID_FLIGHT_SPEED : null;
+      return new Asteroid(
+        center,
+        size,
+        this.canvas,
+        this.context,
+        flightAngle,
+        flightSpeed,
+        rotationSpeed
+      );
+    }
+    addAsteroidIfPlaying() {
+      if (!this.ship.alive) return;
+      this.asteroids.push(this.generateAsteroid(true));
+      setTimeout(() => this.addAsteroidIfPlaying(), 5e3);
+    }
+    beginGame() {
+      this.addAsteroidIfPlaying();
+      this.lastTime = performance.now();
+      this.gameLoop(this.lastTime);
+    }
+    gameLoop(currentTime) {
+      const dt = currentTime - this.lastTime;
+      this.lastTime = currentTime;
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ship.update(dt);
+      this.ship.draw();
+      this.shipBullets.forEach((bullet) => {
+        if (bullet.live) {
+          bullet.update();
+          bullet.draw();
         }
       });
-      document.addEventListener("keyup", (event) => {
-        if (event.key === "ArrowRight") {
-          this.cw = false;
+      if (this.shipBullets.length > 10) {
+        for (let i = this.shipBullets.length - 1; i >= 0; i--) {
+          if (!this.shipBullets[i].live) {
+            this.shipBullets.splice(i, 1);
+          }
         }
-        if (event.key === "ArrowLeft") {
-          this.ccw = false;
-        }
-        if (event.key === "ArrowUp") {
-          this.acc = false;
-        }
-        if (event.key === "z") {
-          this.shoot = false;
+      }
+      this.asteroids.forEach((asteroid) => {
+        if (asteroid.active) {
+          asteroid.update(dt);
+          const collidingBullet = asteroid.checkForCollisions(this.shipBullets);
+          if (collidingBullet) {
+            asteroid.destroy();
+            collidingBullet.destroy();
+          }
+          asteroid.draw();
         }
       });
+      const collisionDetected = this.ship.isCollidingWithAsteroids(
+        this.asteroids
+      );
+      if (collisionDetected) {
+        this.ship.alive = false;
+      }
+      if (this.ship.alive) {
+        requestAnimationFrame((t) => this.gameLoop(t));
+      }
     }
   };
 
   // src/index.js
   var canvas = document.getElementById("canvas");
-  canvas.height = CANVAS_HEIGHT;
-  canvas.width = CANVAS_WIDTH;
-  var ctx = canvas.getContext("2d");
-  var labelAngle = document.getElementById("label--angle");
-  var labelXVelocity = document.getElementById("label--vx");
-  var labelYVelocity = document.getElementById("label--vy");
-  var labelColliding = document.getElementById("label--collision");
-  var labelAsteroidCount = document.getElementById("label--asteroid-count");
-  var labelBulletCount = document.getElementById("label--bullet-count");
-  var labelGameMessage = document.getElementById("label--game-message");
-  var keyManager = new KeyManager();
-  var shipBullets = [];
-  var ship = new Ship(
-    new Point(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2),
-    0,
-    ROCKET_HEIGHT,
-    ROCKET_WIDTH,
-    shipBullets,
-    keyManager,
-    canvas,
-    ctx
-  );
-  function updateLabels() {
-    labelAngle.innerHTML = `Angle: ${ship.rotation.toFixed(2)}`;
-    labelXVelocity.innerHTML = `V_x: ${ship.dX.toFixed(2)}`;
-    labelYVelocity.innerHTML = `V_y: ${ship.dY.toFixed(2)}`;
-    labelColliding.innerHTML = `Colliding: ${ship.colliding ? "colliding" : "safe"}`;
-    labelAsteroidCount.innerHTML = `Asteroid count: ${asteroids.length}`;
-    labelBulletCount.innerHTML = `Bullet count: ${shipBullets.length}`;
-  }
-  function setGameMessage(message) {
-    labelGameMessage.innerHTML = message;
-  }
-  var asteroids = [];
-  function generateAsteroid(canvas2, context, around, distance) {
-    const positionAngle = Math.random() * TAU;
-    const center = new Point(0, distance).rotate(positionAngle).translate(around.x, around.y);
-    const flightAngle = Math.random() * TAU;
-    const rotationSpeed = Math.random() * LARGE_ASTEROID_ROTATION_MODIFIER;
-    const size = LARGE_ASTEROID_SIZE;
-    const flightSpeed = LARGE_ASTEROID_FLIGHT_SPEED;
-    return new Asteroid(
-      center,
-      size,
-      canvas2,
-      context,
-      flightAngle,
-      flightSpeed,
-      rotationSpeed
-    );
-  }
-  function addAsteroid() {
-    const distance = Math.floor(Math.random() * CANVAS_WIDTH - MIN_ASTEROID_SPAWN_DISTANCE) + MIN_ASTEROID_SPAWN_DISTANCE;
-    asteroids.push(generateAsteroid(canvas, ctx, ship.center, distance));
-  }
-  function addAsteroidIfPlaying() {
-    if (ship.alive) {
-      addAsteroid();
-    }
-    setTimeout(addAsteroidIfPlaying, 1e4);
-  }
-  addAsteroidIfPlaying();
-  var lastTime = performance.now();
-  function loop(currentTime) {
-    const dt = currentTime - lastTime;
-    lastTime = currentTime;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ship.update(dt);
-    ship.draw();
-    shipBullets.forEach((bullet) => {
-      if (bullet.live) {
-        bullet.update();
-        bullet.draw();
-      }
-    });
-    if (shipBullets.length > 10) {
-      for (let i = shipBullets.length - 1; i >= 0; i--) {
-        if (!shipBullets[i].live) {
-          shipBullets.splice(i, 1);
-        }
-      }
-    }
-    asteroids.forEach((asteroid) => {
-      if (asteroid.active) {
-        asteroid.update(dt);
-        const collidingBullet = asteroid.checkForCollisions(shipBullets);
-        if (collidingBullet) {
-          asteroid.destroy();
-          collidingBullet.destroy();
-        }
-        asteroid.draw();
-      }
-    });
-    const collisionDetected = ship.isCollidingWithAsteroids(asteroids);
-    if (collisionDetected) {
-      ship.alive = false;
-      setGameMessage("Game Over!");
-    }
-    updateLabels();
-    requestAnimationFrame(loop);
-  }
-  loop(lastTime);
+  var game = new AsteroidsGame(canvas);
+  game.beginGame();
 })();

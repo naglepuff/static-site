@@ -11,6 +11,8 @@ import {
 } from "./constants";
 import { KeyManager } from "./keyManager";
 import { Point } from "./point";
+import { Ship } from "./ship";
+import { Asteroid } from "./asteroid";
 
 class AsteroidsGame {
   constructor(canvas) {
@@ -18,7 +20,7 @@ class AsteroidsGame {
     canvas.height = CANVAS_HEIGHT;
     canvas.width = CANVAS_WIDTH;
 
-    this.ctx = canvas.getContext("2d");
+    this.context = canvas.getContext("2d");
     this.keyManager = new KeyManager();
 
     this.shipBullets = [];
@@ -64,7 +66,7 @@ class AsteroidsGame {
 
   addAsteroidIfPlaying() {
     if (!this.ship.alive) return;
-    this.asteroids.push(generateAsteroid(true));
+    this.asteroids.push(this.generateAsteroid(true));
     setTimeout(() => this.addAsteroidIfPlaying(), 5000);
   }
 
