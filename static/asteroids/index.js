@@ -336,9 +336,13 @@
         this.context
       );
       this.asteroids = [];
+      this.level = 0;
+      this.score = 0;
     }
     generateAsteroid(isLargeAsteroid) {
-      const distance = Math.floor(Math.random() * CANVAS_WIDTH - MIN_ASTEROID_SPAWN_DISTANCE) + MIN_ASTEROID_SPAWN_DISTANCE;
+      const distance = Math.floor(
+        Math.random() * (CANVAS_WIDTH / 2 - MIN_ASTEROID_SPAWN_DISTANCE)
+      ) + MIN_ASTEROID_SPAWN_DISTANCE;
       const positionAngle = Math.random() * TAU;
       const center = new Point(0, distance).rotate(positionAngle).translate(this.ship.center.x, this.ship.center.y);
       const flightAngle = Math.random() * TAU;
@@ -356,14 +360,18 @@
         rotationSpeed
       );
     }
-    addAsteroidIfPlaying() {
-      if (!this.ship.alive) return;
-      this.asteroids.push(this.generateAsteroid(true));
-      setTimeout(() => this.addAsteroidIfPlaying(), 5e3);
+    getAsteroidCountForLevel() {
+      return Math.min(Math.max(2, this.level), 5);
+    }
+    spawnWave() {
+      const asteroidCount = this.getAsteroidCountForLevel();
+      for (let i = 0; i < asteroidCount; i++) {
+        this.asteroids.push(this.generateAsteroid(true));
+      }
     }
     beginGame() {
-      this.addAsteroidIfPlaying();
       this.lastTime = performance.now();
+      this.spawnWave();
       this.gameLoop(this.lastTime);
     }
     gameLoop(currentTime) {
@@ -396,6 +404,15 @@
           asteroid.draw();
         }
       });
+      for (let i = this.asteroids.length - 1; i >= 0; i--) {
+        if (!this.asteroids[i].active) {
+          this.asteroids.splice(i, 1);
+        }
+      }
+      if (this.asteroids.length === 0) {
+        this.level += 1;
+        this.spawnWave();
+      }
       const collisionDetected = this.ship.isCollidingWithAsteroids(
         this.asteroids
       );
